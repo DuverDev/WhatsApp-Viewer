@@ -1,0 +1,8 @@
+12/10/2024, 20:15 - Ana: Hola, ¿cómo estás?
+12/10/2024, 20:16 - Tú: Bien, gracias. ¿Qué tal el proyecto?
+12/10/2024, 20:17 - Ana: Muy bien, ya tengo la versión final.
+12/10/2024, 20:18 - Tú: Perfecto, me la pasas por aquí.
+12/10/2024, 20:19 - Ana: Claro, te la envío en un momento.
+12/10/2024, 21:00 - Carlos: Hola, ¿ya revisaron el presupuesto?
+12/10/2024, 21:02 - Tú: Sí, lo revisé y está bien.
+12/10/2024, 21:04 - Carlos: Excelente, lo cerramos mañana.

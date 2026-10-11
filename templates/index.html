@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es">
+<script>try{var _t=localStorage.getItem('wbv-theme');if(_t)document.documentElement.setAttribute('data-theme',_t)}catch(e){}</script>
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="/static/app_icon_256.png" type="image/png">
+<title>WhatsApp Backup Viewer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  color-scheme:dark;
+  --bg:#0b141a;--hdr:#1f2c34;--side:#111b21;--chat:#0a1014;
+  --input:#2a3942;--border:#233138;--bubble-s:#005c4b;--bubble-r:#202c33;
+  --accent:#00a884;--accent-h:#06cf9c;--text:#e9edef;--dim:#8696a0;
+  --danger:#ef4444;--match:#cf9a0c;--match-cur:#facc15;
+  --meta-c:rgba(255,255,255,.4);--hover:rgba(255,255,255,.08);
+  --sb:rgba(255,255,255,.13);--sb-h:rgba(255,255,255,.22);
+  --bub-sh:0 1px 1px rgba(0,0,0,.12);
+}
+[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f0f2f5;--hdr:#fff;--side:#fff;--chat:#efeae2;
+  --input:#f0f2f5;--border:#d1d7db;--bubble-s:#d9fdd3;--bubble-r:#fff;
+  --accent:#008069;--accent-h:#00a884;--text:#111b21;--dim:#667781;
+  --danger:#ef4444;--match:#e67e00;--match-cur:#f59e0b;
+  --meta-c:rgba(0,0,0,.45);--hover:rgba(0,0,0,.05);
+  --sb:rgba(0,0,0,.12);--sb-h:rgba(0,0,0,.2);
+  --bub-sh:0 1px 2px rgba(0,0,0,.08);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+.hdr{background:var(--hdr);height:52px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.hdr h1{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.hdr-r{margin-left:auto;display:flex;gap:8px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;color:#fff}
+.btn-p{background:var(--accent)}.btn-p:hover{background:var(--accent-h)}
+.btn-s{background:var(--input);color:var(--text)}.btn-s:hover{background:var(--border)}
+.btn-d{background:var(--danger)}.btn-d:hover{background:#dc2626}
+.btn-row{display:flex;gap:6px}.btn-row .btn{flex:1}
+.btn-icon{background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:all .12s;margin-left:auto}
+.btn-icon:hover{color:var(--text);background:var(--hover)}
+
+.main{display:flex;flex:1;overflow:hidden}
+.side{width:280px;background:var(--side);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sec{padding:14px 16px;border-bottom:1px solid var(--border)}
+.sec h3{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin-bottom:10px;font-weight:600;display:flex;align-items:center}
+
+input[type=text],select{width:100%;padding:7px 10px;background:var(--input);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border .15s}
+input:focus,select:focus{border-color:var(--accent)}
+input::placeholder{color:var(--dim)}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238696a0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:28px}
+select option{background:var(--side);color:var(--text)}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:11px;color:var(--dim);margin-bottom:3px;font-weight:500}
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+/* ── Chat list ── */
+.cl{list-style:none}
+.cl-item{padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .12s;display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.cl-item:hover{background:var(--input)}
+.cl-item.on{background:var(--input);border-left:3px solid var(--accent)}
+.cl-av{width:38px;height:38px;border-radius:50%;background:var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--dim);flex-shrink:0}
+.cl-item.on .cl-av{background:var(--accent);color:#fff}
+.cl-info{flex:1;min-width:0}
+.cl-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-meta{font-size:10px;color:var(--dim);margin-top:1px}
+.cl-empty{color:var(--dim);font-size:12px;text-align:center;padding:16px 8px;line-height:1.5}
+
+/* ── Stats ── */
+.stat{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+.stat .l{color:var(--dim)}.stat .v{font-weight:600}
+
+/* ── Chat area ── */
+.chat{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.chat-hdr{background:var(--hdr);padding:0 20px;display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;height:48px;gap:12px}
+.chat-hdr .title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-hdr .sub{font-size:11px;color:var(--dim);white-space:nowrap}
+
+.srch{margin-left:auto;display:flex;align-items:center;gap:4px;background:var(--input);border-radius:8px;padding:3px 6px;flex-shrink:0}
+.srch input{background:transparent;border:none;width:180px;padding:3px 6px;font-size:12px;color:var(--text)}
+.srch input:focus{outline:none}
+.srch .cnt{font-size:10px;color:var(--dim);white-space:nowrap;min-width:48px;text-align:center}
+.srch .nav{display:flex;gap:1px}
+.srch .nav button{background:none;border:none;color:var(--dim);cursor:pointer;padding:3px 5px;border-radius:4px;font-size:11px;transition:all .12s;line-height:1}
+.srch .nav button:hover{color:var(--text);background:var(--hover)}
+
+.msgs{flex:1;overflow-y:auto;padding:12px 48px;
+  background-color:var(--chat);
+  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")}
+[data-theme="light"] .msgs{background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")}
+
+.date-sep{text-align:center;padding:10px 0 6px}
+.date-sep span{background:var(--hdr);padding:5px 13px;border-radius:7px;font-size:11.5px;color:var(--dim);box-shadow:var(--bub-sh);display:inline-block;font-weight:500}
+
+.msg{display:flex;margin-bottom:2px;padding:0 4px}
+.msg.sent{justify-content:flex-end}
+.msg.recv{justify-content:flex-start}
+.msg.sys{justify-content:center}
+.msg.gap{margin-top:10px}
+
+.bub{max-width:55%;padding:6px 9px 4px;border-radius:8px;position:relative;word-wrap:break-word;box-shadow:var(--bub-sh)}
+.msg.sent .bub{background:var(--bubble-s);border-top-right-radius:2px}
+.msg.recv .bub{background:var(--bubble-r);border-top-left-radius:2px}
+.msg.sys .bub{background:rgba(0,168,132,.07);max-width:75%;text-align:center;font-size:11.5px;color:var(--dim);font-style:italic;padding:5px 14px;border-radius:7px;box-shadow:none}
+
+.bub .sender{font-size:12px;font-weight:600;margin-bottom:1px}
+.bub .body{font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.bub .meta{text-align:right;font-size:10px;color:var(--meta-c);margin-top:1px}
+
+/* ── Media ── */
+.media{margin:3px 0}
+.media img{max-width:280px;max-height:320px;border-radius:6px;cursor:pointer;display:block;object-fit:cover}
+.media video{max-width:280px;max-height:280px;border-radius:6px;display:block;outline:none}
+.media audio{width:240px;height:36px;margin:4px 0}
+.media.stk{background:transparent}
+.media.stk img{max-width:150px;max-height:150px;cursor:default;object-fit:contain}
+.bub-stk{background:transparent!important;box-shadow:none!important;padding:2px!important}
+.doc a{color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(0,0,0,.18);border-radius:6px;font-size:12px}
+.doc a:hover{text-decoration:underline}
+.doc-icon{width:32px;height:32px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff}
+.media-na{color:var(--dim);font-size:12px;font-style:italic;padding:6px 0}
+
+/* ── Highlights ── */
+mark.hl{background:var(--match);color:#1a1a1a;border-radius:2px;padding:0 1px}
+mark.hl.cur{background:var(--match-cur);color:#1a1a1a;outline:2px solid var(--match-cur);outline-offset:1px}
+
+/* ── Welcome ── */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);gap:6px}
+.welcome h2{font-size:22px;font-weight:300;color:var(--text)}
+.welcome p{font-size:13px}
+
+/* ── Lightbox ── */
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.lb img,.lb video{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:4px;cursor:default}
+.lb-x{position:absolute;top:14px;right:20px;background:none;border:none;color:#fff;font-size:30px;cursor:pointer;opacity:.7;transition:opacity .15s}
+.lb-x:hover{opacity:1}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--sb);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--sb-h)}
+
+/* ── Gallery ── */
+.gallery{position:absolute;inset:0;top:48px;background:var(--chat);display:flex;flex-direction:column;z-index:10;overflow:hidden}
+.gal-hdr{background:var(--hdr);padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.gal-back{background:none;border:none;color:var(--text);cursor:pointer;font-size:18px;padding:4px 8px;border-radius:6px;transition:background .12s}
+.gal-back:hover{background:var(--hover)}
+.gal-title{font-size:14px;font-weight:600}
+.gal-tabs{display:flex;gap:4px;margin-left:auto}
+.gal-tab{background:var(--input);border:none;color:var(--dim);padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s}
+.gal-tab.on{background:var(--accent);color:#fff}
+.gal-tab:hover:not(.on){color:var(--text)}
+.gal-body{flex:1;overflow-y:auto;padding:12px}
+
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:4px}
+.gal-gi{aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;position:relative;background:var(--input)}
+.gal-gi img,.gal-gi video{width:100%;height:100%;object-fit:cover;display:block}
+.gal-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3)}
+.gal-play::after{content:'';width:0;height:0;border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent rgba(255,255,255,.9)}
+.gal-stk{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.gal-gi-stk{background:transparent;aspect-ratio:1}
+.gal-gi-stk img{object-fit:contain;padding:4px}
+
+.gal-li{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;transition:background .12s;text-decoration:none;color:var(--text)}
+.gal-li:hover{background:var(--input)}
+.gal-li .doc-icon{width:40px;height:40px;font-size:12px}
+.gal-li-info{flex:1;min-width:0}
+.gal-li-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gal-li-meta{font-size:11px;color:var(--dim);margin-top:2px}
+.gal-li audio{flex-shrink:0}
+.gal-empty{color:var(--dim);font-size:13px;text-align:center;padding:40px 20px}
+
+/* ── Modal T&C ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--side);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.modal-hdr{padding:18px 22px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-hdr h2{font-size:16px;font-weight:600}
+.modal-hdr p{font-size:11px;color:var(--dim);margin-top:2px}
+.modal-body{padding:16px 22px;overflow-y:auto;flex:1}
+.modal-body h3{font-size:13px;font-weight:600;margin:14px 0 6px;color:var(--accent)}
+.modal-body h3:first-child{margin-top:0}
+.modal-body p,.modal-body li{font-size:12px;line-height:1.6;color:var(--dim)}
+.modal-body ul{padding-left:18px;margin:4px 0}
+.modal-body a{color:var(--accent);text-decoration:none}
+.modal-body a:hover{text-decoration:underline}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+
+/* ── Manual modal ── */
+.manual-tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.manual-tab{background:var(--input);border:none;color:var(--dim);padding:7px 14px;border-radius:7px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s}
+.manual-tab.on{background:var(--accent);color:#fff}
+.manual-tab:hover:not(.on){color:var(--text)}
+.manual-page{display:none}
+.manual-page.on{display:block}
+.modal-body .step{display:flex;gap:12px;margin:10px 0;align-items:flex-start}
+.modal-body .step-n{background:var(--accent);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
+.modal-body .step-t{flex:1}
+.modal-body .step-t strong{color:var(--text);font-size:12px}
+.modal-body .step-t p{margin:2px 0 0;font-size:12px;color:var(--dim);line-height:1.5}
+.modal-body .tip{background:rgba(0,168,132,.08);border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:11.5px;color:var(--dim);line-height:1.5}
+.modal-body .tip strong{color:var(--accent)}
+.modal-body .warn{background:rgba(239,68,68,.08);border-left:3px solid var(--danger);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:11.5px;color:var(--dim);line-height:1.5}
+.modal-body .warn strong{color:var(--danger)}
+.modal-body .feat{display:flex;gap:10px;align-items:flex-start;margin:8px 0;padding:8px 10px;background:var(--hover);border-radius:8px}
+.modal-body .feat-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center}
+.modal-body .feat-info{flex:1}
+.modal-body .feat-info strong{color:var(--text);font-size:12px;display:block}
+.modal-body .feat-info p{font-size:11.5px;color:var(--dim);margin:2px 0 0;line-height:1.4}
+.modal-body .sub{font-size:12px;font-weight:600;color:var(--text);margin:12px 0 6px}
+
+/* ── Sidebar footer ── */
+.side-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);text-align:center}
+.side-foot a{color:var(--dim);font-size:11px;text-decoration:none;transition:color .12s}
+.side-foot a:hover{color:var(--accent)}
+.side-foot .brand{font-size:10px;color:var(--dim);margin-top:4px;opacity:.6}
+
+.chunk{content-visibility:auto;contain-intrinsic-block-size:auto 5000px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <h1>WhatsApp Backup Viewer</h1>
+  <div class="hdr-r">
+    <button class="btn btn-s" onclick="showManual()">Manual</button>
+    <button class="btn btn-s" id="theme-btn" onclick="toggleTheme()">Modo Claro</button>
+  </div>
+</header>
+
+<div class="main">
+  <aside class="side">
+    <div class="sec">
+      <h3>Chats <button class="btn-icon" onclick="loadChats()" title="Actualizar lista">&#8635;</button></h3>
+      <ul class="cl" id="chat-list"></ul>
+    </div>
+
+    <div class="sec hidden" id="sec-filter">
+      <h3>Filtros</h3>
+      <div class="field">
+        <label>Persona</label>
+        <select id="f-sender"><option value="Todos">Todos</option></select>
+      </div>
+      <div class="field">
+        <label>Yo soy</label>
+        <select id="f-me"></select>
+      </div>
+      <div class="date-row field">
+        <div><label>Desde</label><input type="text" id="f-start" placeholder="dd/mm/aaaa"></div>
+        <div><label>Hasta</label><input type="text" id="f-end" placeholder="dd/mm/aaaa"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="onFilter()">Aplicar</button>
+        <button class="btn btn-s" onclick="onClear()">Limpiar</button>
+      </div>
+    </div>
+
+    <div class="sec hidden" id="sec-stats">
+      <h3>Estadisticas</h3>
+      <div class="stat"><span class="l">Mensajes</span><span class="v" id="st-total">--</span></div>
+      <div class="stat"><span class="l">Participantes</span><span class="v" id="st-ppl">--</span></div>
+      <div class="stat"><span class="l">Periodo</span><span class="v" id="st-range">--</span></div>
+      <div class="stat"><span class="l">Mas activo</span><span class="v" id="st-top">--</span></div>
+    </div>
+
+    <div class="side-foot">
+      <a href="#" onclick="showTerms();return false">Terminos y Condiciones</a>
+      <div class="brand">DMDevLabs &copy; 2024</div>
+    </div>
+  </aside>
+
+  <div class="chat">
+    <div class="chat-hdr">
+      <span class="title" id="ch-title">Selecciona un chat</span>
+      <span class="sub" id="ch-sub"></span>
+      <button class="btn btn-s hidden" id="gal-open" onclick="openGallery()">Media</button>
+      <div class="srch">
+        <input type="text" id="search" placeholder="Buscar en la conversacion...">
+        <span class="cnt" id="s-cnt"></span>
+        <div class="nav">
+          <button onclick="navMatch(-1)" title="Anterior (Shift+Enter)">&#9650;</button>
+          <button onclick="navMatch(1)" title="Siguiente (Enter)">&#9660;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="msgs" id="msgs">
+      <div class="welcome" id="welcome">
+        <h2>WhatsApp Backup Viewer</h2>
+        <p>Coloca carpetas de backup en <b>chats/</b> y selecciona un chat</p>
+      </div>
+    </div>
+
+    <div class="gallery hidden" id="gallery">
+      <div class="gal-hdr">
+        <button class="gal-back" onclick="closeGallery()">&larr;</button>
+        <span class="gal-title">Multimedia</span>
+        <div class="gal-tabs" id="gal-tabs">
+          <button class="gal-tab on" data-tab="fotos">Fotos</button>
+          <button class="gal-tab" data-tab="videos">Videos</button>
+          <button class="gal-tab" data-tab="stickers">Stickers</button>
+          <button class="gal-tab" data-tab="docs">Documentos</button>
+          <button class="gal-tab" data-tab="audio">Audio</button>
+        </div>
+      </div>
+      <div class="gal-body" id="gal-body"></div>
+    </div>
+  </div>
+</div>
+
+<div class="lb hidden" id="lb" onclick="closeLb()">
+  <img id="lb-img" class="hidden" onclick="event.stopPropagation()">
+  <video id="lb-vid" class="hidden" controls onclick="event.stopPropagation()"></video>
+  <button class="lb-x" onclick="closeLb()">&times;</button>
+</div>
+
+<div class="modal-overlay hidden" id="terms-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>Terminos y Condiciones de Uso</h2>
+      <p>WhatsApp Backup Viewer &mdash; DMDevLabs</p>
+    </div>
+    <div class="modal-body">
+      <h3>1. Acerca de la aplicacion</h3>
+      <p>WhatsApp Backup Viewer es un software gratuito y de codigo abierto desarrollado por <strong>DMDevLabs</strong> (<a href="https://DMDevLabs.com" target="_blank">DMDevLabs.com</a>), distribuido bajo la licencia <strong>GNU General Public License v3 (GPL-3.0)</strong>. Su unico proposito es permitir la visualizacion local de archivos de respaldo exportados desde WhatsApp.</p>
+
+      <h3>2. Privacidad y tratamiento de datos</h3>
+      <ul>
+        <li><strong>No recopilamos datos.</strong> Esta aplicacion no recopila, almacena, transmite ni comparte informacion personal de ningun tipo.</li>
+        <li><strong>Procesamiento 100% local.</strong> Todos los archivos de chat se procesan exclusivamente en tu dispositivo. Ningun dato sale de tu equipo.</li>
+        <li><strong>Sin conexion a internet.</strong> La aplicacion no requiere ni utiliza conexion a internet para funcionar. No se conecta a servidores externos.</li>
+        <li><strong>Sin telemetria ni rastreo.</strong> No utilizamos cookies, analytics, telemetria ni ningun mecanismo de seguimiento.</li>
+        <li><strong>Sin cuentas de usuario.</strong> No es necesario registrarse ni crear una cuenta para utilizar la aplicacion.</li>
+      </ul>
+
+      <h3>3. Responsabilidad del usuario</h3>
+      <ul>
+        <li>El usuario es el unico responsable de los archivos de respaldo que carga en la aplicacion y del uso que les da.</li>
+        <li>El usuario debe asegurarse de contar con autorizacion para acceder a los chats que visualiza.</li>
+        <li>DMDevLabs no se hace responsable del uso indebido de la aplicacion, incluyendo pero no limitado a la visualizacion de conversaciones sin el consentimiento de los participantes.</li>
+      </ul>
+
+      <h3>4. Propiedad intelectual</h3>
+      <ul>
+        <li>WhatsApp es una marca registrada de Meta Platforms, Inc. Esta aplicacion no esta afiliada, patrocinada ni respaldada por Meta ni WhatsApp.</li>
+        <li>Esta aplicacion simplemente lee archivos de texto plano generados por la funcion de exportacion nativa de WhatsApp.</li>
+      </ul>
+
+      <h3>5. Limitacion de responsabilidad</h3>
+      <p>Esta aplicacion se proporciona <strong>"tal cual" (AS IS)</strong>, sin garantias de ningun tipo, ya sean expresas o implicitas. DMDevLabs no sera responsable por danos directos, indirectos, incidentales o consecuentes derivados del uso o la imposibilidad de uso de esta aplicacion.</p>
+
+      <h3>6. Licencia de codigo abierto</h3>
+      <p>El codigo fuente esta disponible bajo la licencia GPL-3.0. Puedes copiar, modificar y redistribuir el software siempre que mantengas la misma licencia y atribuyas la autoria original a DMDevLabs.</p>
+
+      <h3>7. Contacto</h3>
+      <p>Para consultas, reportes de errores o contribuciones, visita <a href="https://DMDevLabs.com" target="_blank">DMDevLabs.com</a>.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-s" onclick="closeTerms()">Cerrar</button>
+      <button class="btn btn-p" id="terms-accept" onclick="acceptTerms()">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="manual-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-hdr">
+      <h2>Manual de Usuario</h2>
+      <p>Todo lo que necesitas saber para usar WhatsApp Backup Viewer</p>
+    </div>
+    <div class="modal-body">
+      <div class="manual-tabs" id="manual-tabs">
+        <button class="manual-tab on" data-mt="m-export">Exportar Chat</button>
+        <button class="manual-tab" data-mt="m-business">WhatsApp Business</button>
+        <button class="manual-tab" data-mt="m-usar">Usar la App</button>
+        <button class="manual-tab" data-mt="m-funciones">Funciones</button>
+      </div>
+
+      <!-- TAB: Exportar Chat -->
+      <div class="manual-page on" id="m-export">
+        <h3>Como exportar un chat desde WhatsApp</h3>
+        <p>WhatsApp permite exportar cualquier conversacion (individual o grupal) como un archivo de texto (.txt). Opcionalmente puedes incluir los archivos multimedia (fotos, videos, audios, etc.).</p>
+
+        <div class="sub">En Android</div>
+        <div class="step"><div class="step-n">1</div><div class="step-t"><strong>Abre el chat</strong><p>Entra a la conversacion que deseas exportar (puede ser individual o grupal).</p></div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t"><strong>Abre el menu de opciones</strong><p>Toca los tres puntos verticales (<strong>&#8942;</strong>) en la esquina superior derecha de la pantalla.</p></div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Selecciona "Mas"</strong><p>En el menu desplegable, toca la opcion <strong>"Mas"</strong> para ver opciones adicionales.</p></div></div>
+        <div class="step"><div class="step-n">4</div><div class="step-t"><strong>Toca "Exportar chat"</strong><p>Selecciona <strong>"Exportar chat"</strong>. WhatsApp te preguntara si deseas incluir archivos multimedia o no.</p></div></div>
+        <div class="step"><div class="step-n">5</div><div class="step-t"><strong>Elige incluir o no multimedia</strong><p><strong>"Sin archivos"</strong>: exporta solo el texto (archivo .txt mas liviano).<br><strong>"Incluir archivos"</strong>: exporta el .txt junto con las fotos, videos, audios, etc. como un archivo .zip.</p></div></div>
+        <div class="step"><div class="step-n">6</div><div class="step-t"><strong>Selecciona donde guardar</strong><p>Elige enviar por correo, guardar en Google Drive, o usar cualquier otra app para compartir. <strong>Recomendacion:</strong> guarda el archivo directamente en tu PC usando un cable USB, Bluetooth o la app de archivos.</p></div></div>
+
+        <div class="tip"><strong>Consejo:</strong> si exportas <strong>con archivos multimedia</strong>, recibiras un archivo .zip. Descomprimelo y coloca toda la carpeta resultante dentro de la carpeta <strong>chats/</strong> de esta aplicacion.</div>
+        <div class="tip"><strong>Consejo:</strong> si exportas <strong>sin archivos</strong>, recibiras solo un archivo .txt. Crea una carpeta con el nombre del chat dentro de <strong>chats/</strong> y coloca el .txt ahi.</div>
+
+        <div class="sub">En iPhone (iOS)</div>
+        <div class="step"><div class="step-n">1</div><div class="step-t"><strong>Abre el chat</strong><p>Entra a la conversacion que deseas exportar.</p></div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t"><strong>Toca el nombre del contacto o grupo</strong><p>En la parte superior del chat, toca el nombre o el asunto del grupo para abrir la info del chat.</p></div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Desplazate y toca "Exportar chat"</strong><p>Baja en las opciones hasta encontrar <strong>"Exportar chat"</strong> y tocalo.</p></div></div>
+        <div class="step"><div class="step-n">4</div><div class="step-t"><strong>Elige con o sin archivos</strong><p><strong>"Adjuntar multimedia"</strong>: incluye fotos, videos y audios recientes.<br><strong>"Sin archivos"</strong>: solo el texto de los mensajes.</p></div></div>
+        <div class="step"><div class="step-n">5</div><div class="step-t"><strong>Selecciona la app de destino</strong><p>Puedes enviarlo por <strong>Mail</strong>, guardarlo en <strong>Archivos</strong>, enviarlo por <strong>AirDrop</strong> a tu Mac, o usar cualquier otra app disponible.</p></div></div>
+
+        <div class="tip"><strong>Consejo:</strong> en iPhone, al exportar con multimedia, solo se adjuntan los archivos multimedia mas recientes. Para conservar todo el historial de medios, considera hacer una copia de seguridad completa antes.</div>
+
+        <div class="warn"><strong>Importante:</strong> el archivo exportado es de solo lectura. No es posible importarlo de vuelta a WhatsApp como una copia de seguridad. Sirve unicamente para consulta y visualizacion.</div>
+      </div>
+
+      <!-- TAB: WhatsApp Business -->
+      <div class="manual-page" id="m-business">
+        <h3>Exportar chat desde WhatsApp Business</h3>
+        <p>WhatsApp Business tambien permite exportar chats de manera similar a la version estandar. Los pasos son practicamente identicos.</p>
+
+        <div class="sub">En Android (WhatsApp Business)</div>
+        <div class="step"><div class="step-n">1</div><div class="step-t"><strong>Abre el chat en WhatsApp Business</strong><p>Entra a la conversacion con el cliente o contacto que deseas exportar.</p></div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t"><strong>Toca el menu de opciones</strong><p>Toca los tres puntos verticales (<strong>&#8942;</strong>) en la esquina superior derecha.</p></div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Selecciona "Mas" y luego "Exportar chat"</strong><p>Igual que en WhatsApp normal: <strong>Mas</strong> &rarr; <strong>Exportar chat</strong>.</p></div></div>
+        <div class="step"><div class="step-n">4</div><div class="step-t"><strong>Elige con o sin multimedia</strong><p>Selecciona si deseas incluir archivos multimedia o exportar solo el texto.</p></div></div>
+        <div class="step"><div class="step-n">5</div><div class="step-t"><strong>Guarda o envia el archivo</strong><p>Elige la app de destino para guardar o enviar el archivo exportado a tu PC.</p></div></div>
+
+        <div class="sub">En iPhone (WhatsApp Business)</div>
+        <div class="step"><div class="step-n">1</div><div class="step-t"><strong>Abre el chat</strong><p>Entra a la conversacion que deseas exportar.</p></div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t"><strong>Toca el nombre del contacto</strong><p>En la parte superior del chat, toca el nombre para abrir la informacion del contacto.</p></div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Toca "Exportar chat"</strong><p>Desplazate hacia abajo y selecciona <strong>"Exportar chat"</strong>.</p></div></div>
+        <div class="step"><div class="step-n">4</div><div class="step-t"><strong>Elige con o sin multimedia y selecciona destino</strong><p>Mismas opciones que en WhatsApp estandar.</p></div></div>
+
+        <div class="tip"><strong>Nota:</strong> La funcion de <strong>transferencia de chats</strong> entre telefonos <strong>NO esta disponible</strong> en WhatsApp Business. Sin embargo, la funcion de <strong>exportar chat</strong> (la que usamos aqui) si funciona en ambas versiones.</div>
+
+        <div class="warn"><strong>Diferencia clave:</strong> los chats de WhatsApp Business pueden incluir mensajes automaticos, etiquetas de respuestas rapidas y mensajes de catalogo. Estos aparecen como texto normal al exportarlos.</div>
+      </div>
+
+      <!-- TAB: Usar la App -->
+      <div class="manual-page" id="m-usar">
+        <h3>Como usar WhatsApp Backup Viewer</h3>
+        <p>Esta aplicacion te permite visualizar los chats exportados de WhatsApp en tu computadora, de forma local y sin conexion a internet.</p>
+
+        <div class="sub">Preparar los archivos</div>
+        <div class="step"><div class="step-n">1</div><div class="step-t"><strong>Localiza la carpeta "chats/"</strong><p>Junto al ejecutable <strong>WhatsApp Viewer.exe</strong> debe existir una carpeta llamada <strong>chats/</strong>. Si no existe, creala manualmente.</p></div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t"><strong>Crea una subcarpeta por cada chat</strong><p>Dentro de <strong>chats/</strong>, crea una carpeta con el nombre del contacto o grupo. Por ejemplo:<br><code>chats/Juan Perez/</code><br><code>chats/Grupo Familia/</code></p></div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Coloca los archivos exportados</strong><p>Si exportaste <strong>sin multimedia</strong>: coloca el archivo .txt dentro de la subcarpeta.<br>Si exportaste <strong>con multimedia</strong>: descomprime el .zip y coloca <strong>todos</strong> los archivos (el .txt y los multimedia) dentro de la subcarpeta.</p></div></div>
+
+        <div class="tip"><strong>Ejemplo de estructura correcta:</strong><br>
+        <code style="font-size:11px;line-height:1.8">
+        WhatsApp Viewer.exe<br>
+        chats/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;Juan Perez/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Chat de WhatsApp con Juan Perez.txt<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IMG-20240115-WA0001.jpg<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AUD-20240115-WA0003.opus<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;Grupo Familia/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Chat de WhatsApp con Grupo Familia.txt<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VID-20240220-WA0005.mp4
+        </code></div>
+
+        <div class="sub">Abrir y visualizar</div>
+        <div class="step"><div class="step-n">4</div><div class="step-t"><strong>Ejecuta WhatsApp Viewer.exe</strong><p>Haz doble clic en el ejecutable. Se abrira una ventana con la aplicacion.</p></div></div>
+        <div class="step"><div class="step-n">5</div><div class="step-t"><strong>Selecciona un chat</strong><p>En el panel izquierdo veras la lista de chats detectados. Haz clic en cualquiera para ver los mensajes.</p></div></div>
+        <div class="step"><div class="step-n">6</div><div class="step-t"><strong>Navega por los mensajes</strong><p>Los mensajes se muestran en burbujas similares a WhatsApp. Puedes hacer scroll para recorrer toda la conversacion.</p></div></div>
+
+        <div class="warn"><strong>No aparecen chats?</strong> Haz clic en el boton de actualizar (<strong>&#8635;</strong>) junto a "Chats" en la barra lateral. Verifica que la estructura de carpetas sea correcta y que cada subcarpeta contenga al menos un archivo .txt.</div>
+      </div>
+
+      <!-- TAB: Funciones -->
+      <div class="manual-page" id="m-funciones">
+        <h3>Funciones de la aplicacion</h3>
+
+        <div class="feat"><div class="feat-icon">&#128269;</div><div class="feat-info"><strong>Buscar mensajes</strong><p>Usa la barra de busqueda en la parte superior del chat. Escribe cualquier texto y navega entre los resultados con las flechas o con Enter / Shift+Enter. Tambien puedes usar <strong>Ctrl+F</strong> para enfocar la busqueda rapidamente.</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#128247;</div><div class="feat-info"><strong>Ver multimedia</strong><p>Las fotos se muestran directamente en las burbujas. Haz clic en una imagen para ampliarla en pantalla completa. Los videos y audios se reproducen desde el propio chat.</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#127912;</div><div class="feat-info"><strong>Galeria multimedia</strong><p>Haz clic en el boton <strong>"Media"</strong> (aparece al cargar un chat con archivos multimedia). Navega entre pestanas: Fotos, Videos, Stickers, Documentos y Audio.</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#128101;</div><div class="feat-info"><strong>Filtrar por persona</strong><p>En la seccion "Filtros" del panel izquierdo, selecciona un participante para ver solo sus mensajes. Usa <strong>"Yo soy"</strong> para indicar cual eres tu en la conversacion (afecta la direccion de las burbujas).</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#128197;</div><div class="feat-info"><strong>Filtrar por fecha</strong><p>Usa los campos <strong>"Desde"</strong> y <strong>"Hasta"</strong> con formato dd/mm/aaaa para ver solo los mensajes de un periodo especifico.</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#128202;</div><div class="feat-info"><strong>Estadisticas</strong><p>La seccion "Estadisticas" muestra un resumen: total de mensajes, numero de participantes, periodo del chat y quien es el mas activo.</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#127763;</div><div class="feat-info"><strong>Modo claro / oscuro</strong><p>Haz clic en <strong>"Modo Claro"</strong> o <strong>"Modo Oscuro"</strong> en la esquina superior derecha para cambiar el tema. Tu preferencia se recuerda automaticamente.</p></div></div>
+
+        <div class="feat"><div class="feat-icon">&#128274;</div><div class="feat-info"><strong>Privacidad total</strong><p>Todo se procesa en tu computadora. No se envia ningun dato a internet. No hay cuentas, no hay servidores, no hay rastreo. Tus chats permanecen 100% privados.</p></div></div>
+
+        <div class="sub">Atajos de teclado</div>
+        <ul>
+          <li><strong>Ctrl + F</strong> &mdash; Enfocar la barra de busqueda</li>
+          <li><strong>Enter</strong> &mdash; Ir al siguiente resultado de busqueda</li>
+          <li><strong>Shift + Enter</strong> &mdash; Ir al resultado anterior</li>
+          <li><strong>Escape</strong> &mdash; Limpiar busqueda / Cerrar imagen ampliada</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-p" onclick="closeManual()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var COLORS=['#1f97d4','#00a884','#e07c2d','#d65745','#9c5bc0','#0097a7','#c49000','#d9548f','#2e9e51','#687d87'];
+
+var CHUNK=100;
+var _chunks=[];
+var _observer=null;
+
+var S={
+  chatName:'',chats:[],
+  all:[],filtered:[],senders:[],myName:'',
+  sColors:{},
+  query:'',matches:[],totalM:0,curM:-1,
+  searchIdx:[],_prevHl:-1
+};
+
+/* ── Theme ── */
+function toggleTheme(){
+  var h=document.documentElement;
+  var c=h.getAttribute('data-theme')||'dark';
+  var n=c==='dark'?'light':'dark';
+  h.setAttribute('data-theme',n);
+  document.getElementById('theme-btn').textContent=n==='dark'?'Modo Claro':'Modo Oscuro';
+  try{localStorage.setItem('wbv-theme',n)}catch(e){}
+}
+
+/* ── Terms ── */
+function showTerms(){
+  document.getElementById('terms-modal').classList.remove('hidden');
+  var accepted=false;
+  try{accepted=localStorage.getItem('wbv-terms-accepted')==='1'}catch(e){}
+  document.getElementById('terms-accept').classList.toggle('hidden',accepted)
+}
+function closeTerms(){document.getElementById('terms-modal').classList.add('hidden')}
+function acceptTerms(){
+  try{localStorage.setItem('wbv-terms-accepted','1')}catch(e){}
+  closeTerms()
+}
+
+/* ── Manual ── */
+function showManual(){
+  document.getElementById('manual-modal').classList.remove('hidden');
+  switchManualTab('m-export')
+}
+function closeManual(){document.getElementById('manual-modal').classList.add('hidden')}
+function switchManualTab(id){
+  document.querySelectorAll('.manual-tab').forEach(function(b){b.classList.toggle('on',b.dataset.mt===id)});
+  document.querySelectorAll('.manual-page').forEach(function(p){p.classList.toggle('on',p.id===id)})
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded',function(){
+  try{if(localStorage.getItem('wbv-theme')==='light')document.getElementById('theme-btn').textContent='Modo Oscuro'}catch(e){}
+  try{if(!localStorage.getItem('wbv-terms-accepted'))showTerms()}catch(e){showTerms()}
+  loadChats();
+  var si=document.getElementById('search'),t;
+  si.addEventListener('input',function(){
+    clearTimeout(t);
+    t=setTimeout(function(){var q=si.value.trim();if(q!==S.query){S.query=q;doSearch(q)}},300)
+  });
+  si.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();navMatch(e.shiftKey?-1:1)}
+    if(e.key==='Escape'){si.value='';S.query='';doSearch('')}
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.ctrlKey&&e.key==='f'){e.preventDefault();si.focus();si.select()}
+    if(e.key==='Escape'&&!document.getElementById('lb').classList.contains('hidden'))closeLb();
+  });
+  document.getElementById('chat-list').addEventListener('click',function(e){
+    var item=e.target.closest('.cl-item');
+    if(item)loadChat(item.dataset.chat)
+  });
+  document.getElementById('gal-tabs').addEventListener('click',function(e){
+    var tab=e.target.closest('.gal-tab');
+    if(tab)switchGalTab(tab.dataset.tab)
+  });
+  document.getElementById('gal-body').addEventListener('click',function(e){
+    var gi=e.target.closest('.gal-gi');
+    if(gi&&gi.dataset.src)openLb(gi.dataset.src,!!gi.dataset.vid)
+  });
+  document.getElementById('terms-modal').addEventListener('click',function(e){
+    if(e.target===this)closeTerms()
+  });
+  document.getElementById('manual-modal').addEventListener('click',function(e){
+    if(e.target===this)closeManual()
+  });
+  document.getElementById('manual-tabs').addEventListener('click',function(e){
+    var tab=e.target.closest('.manual-tab');
+    if(tab)switchManualTab(tab.dataset.mt)
+  });
+});
+
+/* ── Chat list ── */
+function loadChats(){
+  fetch('/api/chats').then(function(r){return r.json()}).then(function(d){S.chats=d;renderChats()}).catch(function(){})
+}
+function renderChats(){
+  var ul=document.getElementById('chat-list');
+  if(!S.chats.length){ul.innerHTML='<div class="cl-empty">Coloca carpetas de chat en <b>chats/</b> y haz clic en &#8635;</div>';return}
+  ul.innerHTML=S.chats.map(function(c){
+    var on=c.name===S.chatName?' on':'';
+    var ini=c.name.charAt(0).toUpperCase();
+    var meta=c.mediaCount?c.mediaCount+' archivos':'Solo texto';
+    return '<li class="cl-item'+on+'" data-chat="'+esc(c.name)+'"><div class="cl-av">'+esc(ini)+'</div><div class="cl-info"><div class="cl-name">'+esc(c.name)+'</div><div class="cl-meta">'+meta+'</div></div></li>'
+  }).join('')
+}
+
+/* ── Load chat ── */
+function loadChat(name){
+  S.chatName=name;renderChats();closeGallery();
+  document.getElementById('msgs').innerHTML='<div class="welcome"><h2>Cargando...</h2></div>';
+  document.getElementById('ch-title').textContent=name;
+  document.getElementById('ch-sub').textContent='';
+  document.getElementById('gal-open').classList.add('hidden');
+  fetch('/api/chats/'+encodeURIComponent(name)+'/messages')
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(d.error){alert(d.error);return}
+      S.all=d.messages;S.senders=d.senders;S.myName=d.myName;
+      assignColors();updateDropdowns();showSections();
+      document.getElementById('ch-title').textContent=name;
+      var hasMedia=d.messages.some(function(m){return m.mt&&m.mt!=='omitted'&&m.me});
+      if(hasMedia)document.getElementById('gal-open').classList.remove('hidden');
+      onFilter()
+    })
+    .catch(function(e){alert('Error cargando chat: '+(e.message||e))})
+}
+
+/* ── Colors ── */
+function assignColors(){S.sColors={};S.senders.forEach(function(s,i){S.sColors[s]=COLORS[i%COLORS.length]})}
+function getColor(s){if(!S.sColors[s])S.sColors[s]=COLORS[Object.keys(S.sColors).length%COLORS.length];return S.sColors[s]}
+
+/* ── Dropdowns ── */
+function updateDropdowns(){
+  var fs=document.getElementById('f-sender'),fm=document.getElementById('f-me');
+  fs.innerHTML='<option value="Todos">Todos</option>'+S.senders.map(function(s){return '<option>'+esc(s)+'</option>'}).join('');
+  fm.innerHTML=S.senders.map(function(s){return '<option'+(s===S.myName?' selected':'')+'>'+esc(s)+'</option>'}).join('');
+  fm.onchange=function(){S.myName=fm.value;render(S.filtered)}
+}
+function showSections(){
+  document.getElementById('sec-filter').classList.remove('hidden');
+  document.getElementById('sec-stats').classList.remove('hidden')
+}
+
+/* ── Filter ── */
+function onFilter(){
+  var r=S.all;
+  var sender=document.getElementById('f-sender').value;
+  if(sender&&sender!=='Todos')r=r.filter(function(m){return m.sender===sender});
+  var sd=parseD(document.getElementById('f-start').value);
+  var ed=parseD(document.getElementById('f-end').value);
+  if(sd)r=r.filter(function(m){var d=parseD(m.date);return d&&d>=sd});
+  if(ed){var e2=new Date(ed);e2.setHours(23,59,59);r=r.filter(function(m){var d=parseD(m.date);return d&&d<=e2})}
+  S.filtered=r;S.query=document.getElementById('search').value.trim();
+  render(r);stats(r)
+}
+function onClear(){
+  document.getElementById('f-sender').value='Todos';
+  document.getElementById('f-start').value='';
+  document.getElementById('f-end').value='';
+  document.getElementById('search').value='';S.query='';
+  onFilter()
+}
+function parseD(s){
+  if(!s)return null;var p=s.split('/');if(p.length!==3)return null;
+  var a=+p[0],b=+p[1],y=+p[2];
+  var d1=new Date(y,b-1,a);if(!isNaN(d1)&&d1.getDate()===a)return d1;
+  var d2=new Date(y,a-1,b);if(!isNaN(d2)&&d2.getDate()===b)return d2;
+  return null
+}
+
+/* ── Media URL ── */
+function murl(f){return'/api/chats/'+encodeURIComponent(S.chatName)+'/media/'+encodeURIComponent(f)}
+function docExt(f){var d=f.lastIndexOf('.');return d>=0?f.slice(d+1).toUpperCase():''}
+
+/* ── Chunk builder ── */
+function buildChunk(msgs,start,end){
+  var p=[];
+  var ld=start>0?msgs[start-1].date:'';
+  var ls=start>0?msgs[start-1].sender:'';
+  for(var i=start;i<end;i++){
+    var m=msgs[i];
+    if(m.date!==ld){p.push('<div class="date-sep"><span>',esc(m.date),'</span></div>');ld=m.date;ls=''}
+    if(m.sender==='Sistema'){
+      p.push('<div class="msg sys" id="m',i,'"><div class="bub"><span class="body">',esc(m.text),'</span></div></div>');
+      ls=m.sender;continue
+    }
+    var sent=m.sender===S.myName;
+    var gap=ls&&m.sender!==ls?' gap':'';
+    var first=m.sender!==ls;
+    var col=getColor(m.sender);
+    var isStk=m.mt==='sticker'&&m.me;
+    p.push('<div class="msg ',sent?'sent':'recv',gap,'" id="m',i,'"><div class="bub',isStk?' bub-stk':'','">');
+    if(first&&!sent)p.push('<div class="sender" style="color:',col,'">',esc(m.sender),'</div>');
+    if(m.mt){
+      if(m.mt==='omitted'){
+        p.push('<div class="media-na">Multimedia omitido</div>')
+      }else if(m.me&&m.mf){
+        var u=murl(m.mf);
+        if(m.mt==='image')p.push('<div class="media"><img src="',u,'" loading="lazy" onclick="openLb(this.src,false)"></div>');
+        else if(m.mt==='video')p.push('<div class="media"><video src="',u,'" controls preload="none"></video></div>');
+        else if(m.mt==='audio')p.push('<div class="media"><audio src="',u,'" controls preload="none"></audio></div>');
+        else if(m.mt==='sticker')p.push('<div class="media stk"><img src="',u,'" loading="lazy"></div>');
+        else if(m.mt==='document'){
+          var ext=docExt(m.mf);
+          p.push('<div class="media doc"><a href="',u,'" target="_blank"><div class="doc-icon">',ext,'</div><span>',esc(m.mf),'</span></a></div>')
+        }
+      }else{
+        p.push('<div class="media-na">',esc(m.mf||'Archivo no disponible'),'</div>')
+      }
+    }else{
+      p.push('<span class="body">',esc(m.text),'</span>')
+    }
+    p.push('<div class="meta">',esc(m.time),'</div></div></div>');
+    ls=m.sender
+  }
+  return p.join('')
+}
+
+function renderChunkAt(ci,el){
+  if(_chunks[ci].rendered)return;
+  var box=document.getElementById('msgs');
+  var oldH=el.offsetHeight;
+  var above=el.offsetTop<box.scrollTop;
+  el.innerHTML=_chunks[ci].html;
+  _chunks[ci].html='';
+  _chunks[ci].rendered=true;
+  var newH=el.offsetHeight;
+  _chunks[ci].height=newH;
+  el.style.minHeight='';
+  if(above&&newH!==oldH)box.scrollTop+=newH-oldH
+}
+
+/* ── Render (chunked) ── */
+function render(msgs){
+  if(_observer){_observer.disconnect();_observer=null}
+  _chunks=[];
+  var box=document.getElementById('msgs');
+  if(!msgs.length){
+    box.innerHTML='<div class="welcome"><h2>No hay mensajes</h2></div>';
+    document.getElementById('ch-sub').textContent='';
+    S.searchIdx=[];S._prevHl=-1;S.matches=[];S.totalM=0;S.curM=-1;updCnt();
+    return
+  }
+
+  S.searchIdx=new Array(msgs.length);
+  for(var i=0;i<msgs.length;i++){
+    S.searchIdx[i]=msgs[i].mt?'':(msgs[i].text||'').toLowerCase()
+  }
+
+  for(var ci=0;ci*CHUNK<msgs.length;ci++){
+    var start=ci*CHUNK;
+    var end=Math.min(start+CHUNK,msgs.length);
+    _chunks.push({
+      html:buildChunk(msgs,start,end),
+      height:(end-start)*48,
+      rendered:false
+    })
+  }
+
+  box.innerHTML=_chunks.map(function(c,i){
+    return '<div class="chunk" data-ci="'+i+'" style="min-height:'+c.height+'px"></div>'
+  }).join('');
+
+  var chunkEls=box.querySelectorAll('.chunk');
+  var preRender=Math.min(3,_chunks.length);
+  for(var i=_chunks.length-preRender;i<_chunks.length;i++){
+    renderChunkAt(i,chunkEls[i])
+  }
+
+  box.scrollTop=box.scrollHeight;
+
+  _observer=new IntersectionObserver(function(entries){
+    for(var j=0;j<entries.length;j++){
+      if(entries[j].isIntersecting){
+        var ci=+entries[j].target.dataset.ci;
+        renderChunkAt(ci,entries[j].target)
+      }
+    }
+  },{root:box,rootMargin:'1000px 0px'});
+
+  for(var i=0;i<chunkEls.length;i++){
+    if(!_chunks[i].rendered)_observer.observe(chunkEls[i])
+  }
+
+  S._prevHl=-1;S.matches=[];S.totalM=0;S.curM=-1;updCnt();
+  if(S.query)doSearch(S.query);
+  document.getElementById('ch-sub').textContent=msgs.length+' mensajes'
+}
+
+/* ── Search ── */
+function doSearch(q){
+  restoreMsg(S._prevHl);S._prevHl=-1;
+  if(!q){S.matches=[];S.totalM=0;S.curM=-1;updCnt();return}
+  var lq=q.toLowerCase();S.matches=[];
+  for(var i=0;i<S.searchIdx.length;i++){
+    var t=S.searchIdx[i];if(!t)continue;
+    var pos=0,occ=0;
+    while((pos=t.indexOf(lq,pos))!==-1){S.matches.push({mi:i,occ:occ});pos+=lq.length;occ++}
+  }
+  S.totalM=S.matches.length;S.curM=S.totalM>0?0:-1;updCnt();
+  if(S.curM>=0)goToMatch()
+}
+function restoreMsg(mi){
+  if(mi<0||!S.filtered[mi])return;
+  var el=document.getElementById('m'+mi);if(!el)return;
+  var b=el.querySelector('.body');if(b)b.textContent=S.filtered[mi].text
+}
+function goToMatch(){
+  restoreMsg(S._prevHl);
+  if(S.curM<0){S._prevHl=-1;return}
+  var m=S.matches[S.curM];
+  var ci=Math.floor(m.mi/CHUNK);
+  var chunkEl=document.querySelector('.chunk[data-ci="'+ci+'"]');
+  if(chunkEl)renderChunkAt(ci,chunkEl);
+  var el=document.getElementById('m'+m.mi);if(!el){S._prevHl=-1;return}
+  var b=el.querySelector('.body');if(!b){S._prevHl=-1;return}
+  b.innerHTML=hlMsg(S.filtered[m.mi].text,S.query,m.occ);
+  S._prevHl=m.mi;
+  requestAnimationFrame(function(){var c=b.querySelector('.hl.cur');if(c)c.scrollIntoView({block:'center'})})
+}
+function hlMsg(text,q,curOcc){
+  var lo=text.toLowerCase(),lq=q.toLowerCase();
+  var r='',p2=0,n=0;
+  while(true){
+    var idx=lo.indexOf(lq,p2);
+    if(idx<0){r+=esc(text.slice(p2));break}
+    r+=esc(text.slice(p2,idx));
+    r+='<mark class="hl';if(n===curOcc)r+=' cur';
+    r+='">';r+=esc(text.slice(idx,idx+q.length));r+='</mark>';
+    n++;p2=idx+q.length
+  }
+  return r
+}
+function navMatch(dir){if(!S.totalM)return;S.curM=((S.curM+dir)%S.totalM+S.totalM)%S.totalM;goToMatch();updCnt()}
+function updCnt(){
+  var el=document.getElementById('s-cnt');
+  if(S.totalM>0)el.textContent=(S.curM+1)+' de '+S.totalM;
+  else if(S.query)el.textContent='Sin resultados';else el.textContent=''
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+/* ── Stats ── */
+function stats(msgs){
+  if(!msgs.length){['st-total','st-ppl','st-range','st-top'].forEach(function(id){document.getElementById(id).textContent='--'});return}
+  var c={};msgs.forEach(function(m){c[m.sender]=(c[m.sender]||0)+1});
+  var ds=msgs.map(function(m){return m.date}),top=Object.entries(c).sort(function(a,b){return b[1]-a[1]})[0];
+  document.getElementById('st-total').textContent=msgs.length;
+  document.getElementById('st-ppl').textContent=Object.keys(c).length;
+  document.getElementById('st-range').textContent=ds[0]+' - '+ds[ds.length-1];
+  document.getElementById('st-top').textContent=top[0]+' ('+top[1]+')'
+}
+
+/* ── Lightbox ── */
+function openLb(src,isVideo){
+  var lb=document.getElementById('lb'),img=document.getElementById('lb-img'),vid=document.getElementById('lb-vid');
+  if(isVideo){img.classList.add('hidden');vid.classList.remove('hidden');vid.src=src}
+  else{vid.classList.add('hidden');vid.pause();vid.src='';img.classList.remove('hidden');img.src=src}
+  lb.classList.remove('hidden')
+}
+function closeLb(){
+  document.getElementById('lb').classList.add('hidden');
+  var vid=document.getElementById('lb-vid');vid.pause();vid.src='';vid.classList.add('hidden');
+  var img=document.getElementById('lb-img');img.src='';img.classList.add('hidden')
+}
+
+/* ── Gallery ── */
+function openGallery(){document.getElementById('gallery').classList.remove('hidden');switchGalTab('fotos')}
+function closeGallery(){document.getElementById('gallery').classList.add('hidden')}
+function switchGalTab(tab){
+  document.querySelectorAll('.gal-tab').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+  var body=document.getElementById('gal-body'),items=[];
+  S.all.forEach(function(m){
+    if(!m.mt||m.mt==='omitted'||!m.me||!m.mf)return;
+    if(tab==='fotos'&&m.mt==='image')items.push(m);
+    else if(tab==='videos'&&m.mt==='video')items.push(m);
+    else if(tab==='stickers'&&m.mt==='sticker')items.push(m);
+    else if(tab==='docs'&&m.mt==='document')items.push(m);
+    else if(tab==='audio'&&m.mt==='audio')items.push(m)
+  });
+  if(!items.length){body.innerHTML='<div class="gal-empty">No hay archivos de este tipo</div>';return}
+  if(tab==='fotos'){
+    body.innerHTML='<div class="gal-grid">'+items.map(function(m){
+      var u=murl(m.mf);
+      return '<div class="gal-gi" data-src="'+esc(u)+'"><img src="'+u+'" loading="lazy"></div>'
+    }).join('')+'</div>'
+  }else if(tab==='videos'){
+    body.innerHTML='<div class="gal-grid">'+items.map(function(m){
+      var u=murl(m.mf);
+      return '<div class="gal-gi" data-src="'+esc(u)+'" data-vid="1"><video src="'+u+'" preload="metadata"></video><div class="gal-play"></div></div>'
+    }).join('')+'</div>'
+  }else if(tab==='stickers'){
+    body.innerHTML='<div class="gal-grid gal-stk">'+items.map(function(m){
+      var u=murl(m.mf);
+      return '<div class="gal-gi gal-gi-stk" data-src="'+esc(u)+'"><img src="'+u+'" loading="lazy"></div>'
+    }).join('')+'</div>'
+  }else if(tab==='docs'){
+    body.innerHTML=items.map(function(m){
+      var u=murl(m.mf),ext=docExt(m.mf);
+      return '<a href="'+u+'" target="_blank" class="gal-li"><div class="doc-icon">'+ext+'</div><div class="gal-li-info"><div class="gal-li-name">'+esc(m.mf)+'</div><div class="gal-li-meta">'+esc(m.date)+' '+esc(m.time)+' - '+esc(m.sender)+'</div></div></a>'
+    }).join('')
+  }else{
+    body.innerHTML=items.map(function(m){
+      var u=murl(m.mf);
+      return '<div class="gal-li"><div class="doc-icon">'+docExt(m.mf)+'</div><div class="gal-li-info"><div class="gal-li-name">'+esc(m.mf)+'</div><div class="gal-li-meta">'+esc(m.date)+' '+esc(m.time)+' - '+esc(m.sender)+'</div></div><audio src="'+u+'" controls preload="none"></audio></div>'
+    }).join('')
+  }
+}
+</script>
+</body>
+</html>

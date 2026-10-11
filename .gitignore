@@ -1,0 +1,33 @@
+# Chats de WhatsApp (datos privados)
+chats/
+
+# Build artifacts
+dist/
+build/
+*.spec
+*.exe
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Certificados
+*.pfx
+*.cer
+
+# Iconos generados (regenerar con gen_icon.py)
+app_icon_256.png
+app.ico
+
+# Version info generado (regenerar con version_info.py)
+version_info.txt
+
+# Favorites (datos de usuario / modulo eliminado)
+favorites.json
+storage.py
