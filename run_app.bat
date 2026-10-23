@@ -1,11 +1,15 @@
 @echo off
 cd /d "%~dp0"
 
-where py >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-    set PYTHON=py
+if exist "%USERPROFILE%\anaconda3\python.exe" (
+    set PYTHON="%USERPROFILE%\anaconda3\python.exe"
 ) else (
-    set PYTHON=python
+    where py >nul 2>nul
+    if %ERRORLEVEL% EQU 0 (
+        set PYTHON=py
+    ) else (
+        set PYTHON=python
+    )
 )
 
 %PYTHON% -c "import flask; import webview" >nul 2>nul

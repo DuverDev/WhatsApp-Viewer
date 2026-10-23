@@ -1,6 +1,6 @@
 """Generate version_info.txt for PyInstaller --version-file."""
 
-VERSION = (1, 0, 0, 0)
+VERSION = (1, 1, 0, 0)
 
 info = f"""# UTF-8
 VSVersionInfo(

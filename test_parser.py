@@ -36,6 +36,54 @@ class ParseWhatsappBackupTests(unittest.TestCase):
         self.assertEqual(messages[1].sender, "Nora Bonita 💙")
         self.assertEqual(messages[2].sender, "💙 Blacktao")
 
+    def test_parses_english_android_format_with_attachments_and_omitted(self):
+        content = (
+            "10/14/24, 9:30 AM - Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them. Tap to learn more.\n"
+            "10/14/24, 9:31 AM - John: Hey there!\n"
+            "10/14/24, 9:32 AM - You: Hi John, check this out\n"
+            "10/14/24, 9:33 AM - You: IMG-20241014-WA0001.jpg (file attached)\n"
+            "10/14/24, 9:34 AM - John: <Media omitted>"
+        )
+        messages = parse_whatsapp_backup(content)
+        self.assertEqual(len(messages), 5)
+        self.assertEqual(messages[0].sender, "Sistema")
+        self.assertEqual(messages[1].sender, "John")
+        self.assertEqual(messages[1].text, "Hey there!")
+        self.assertEqual(messages[2].sender, "You")
+        self.assertEqual(messages[3].media_type, "image")
+        self.assertEqual(messages[3].media_file, "IMG-20241014-WA0001.jpg")
+        self.assertEqual(messages[4].media_type, "omitted")
+
+    def test_parses_ios_bracketed_format_with_seconds_and_unicode_marks(self):
+        content = (
+            "\u200e[12/31/23, 11:59:02 PM] Messages and calls are end-to-end encrypted.\n"
+            "[12/31/23, 11:59:45 PM] Alice: Happy New Year! 🎉\n"
+            "[01/01/24, 12:00:10 AM] Bob: <attached: 00000001-PHOTO-2024-01-01.jpg>\n"
+            "[01/01/24, 12:01:05 AM] Alice: Awesome picture!"
+        )
+        messages = parse_whatsapp_backup(content)
+        self.assertEqual(len(messages), 4)
+        self.assertEqual(messages[0].sender, "Sistema")
+        self.assertEqual(messages[1].sender, "Alice")
+        self.assertEqual(messages[1].text, "Happy New Year! 🎉")
+        self.assertEqual(messages[2].sender, "Bob")
+        self.assertEqual(messages[2].media_type, "image")
+        self.assertEqual(messages[2].media_file, "00000001-PHOTO-2024-01-01.jpg")
+        self.assertEqual(messages[3].sender, "Alice")
+
+    def test_multiline_messages_in_english(self):
+        content = (
+            "10/14/24, 10:00 AM - John: First line of the message\n"
+            "Second line of the message\n"
+            "Third line of the message\n"
+            "10/14/24, 10:02 AM - You: Got it!"
+        )
+        messages = parse_whatsapp_backup(content)
+        self.assertEqual(len(messages), 2)
+        self.assertIn("Second line of the message", messages[0].text)
+        self.assertIn("Third line of the message", messages[0].text)
+        self.assertEqual(messages[1].text, "Got it!")
+
 
 if __name__ == "__main__":
     unittest.main()

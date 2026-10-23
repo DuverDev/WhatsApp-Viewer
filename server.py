@@ -75,7 +75,7 @@ def get_chat_messages(name):
 
         existing = {f.name for f in folder.iterdir() if f.is_file()}
         senders = sorted({m.sender for m in parsed if m.sender != "Sistema"})
-        my_name = "Tú" if "Tú" in senders else (senders[0] if senders else "")
+        my_name = "Tú" if "Tú" in senders else ("You" if "You" in senders else (senders[0] if senders else ""))
 
         messages = []
         for m in parsed:

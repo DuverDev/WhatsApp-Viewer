@@ -3,32 +3,59 @@ from dataclasses import dataclass
 from datetime import datetime, time
 from typing import List, Optional
 
-MESSAGE_PATTERN = re.compile(
-    r"^(?P<date>\d{1,2}/\d{1,2}/\d{4}),\s*(?P<time>\d{1,2}:\d{2})\s*(?:a\.\s*m\.|p\.\s*m\.?)?\s*-\s*(?:(?P<sender>.*?)(?:\s*:\s*|\s+-\s*)(?P<message>.*)|(?P<system_message>.*))$",
+# Invisible Unicode characters frequently present in WhatsApp exports (e.g. iOS LTR/RTL marks, BOM)
+_INVISIBLE_CHARS = "\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069\ufeff\u200b"
+_TRANSLATION_TABLE = str.maketrans({
+    "\xa0": " ",
+    "\u202f": " ",
+    "\u2007": " ",
+    **{c: "" for c in _INVISIBLE_CHARS}
+})
+
+# Android / Standard Web export pattern:
+# e.g.: 12/10/2024, 20:15 - Ana: Hola
+#       10/14/24, 9:30 PM - John: Hello
+#       28/8/2021, 8:18 a. m. - Sistema: Cifrado...
+MESSAGE_PATTERN_STANDARD = re.compile(
+    r"^(?P<date>\d{1,4}[/\.-]\d{1,2}[/\.-]\d{2,4})[,\s]+(?P<time>\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:[ap]\.?\s*m\.?|[ap]m))?)\s*-\s*(?:(?P<sender>.*?)(?:\s*:\s*|\s+-\s*)(?P<message>.*)|(?P<system_message>.*))$",
     re.IGNORECASE,
 )
 
-_MEDIA_ATTACH = re.compile(
-    r"^[‎‏‪‬⁦⁩]*(.+?)\s*\(archivo adjunto\)$"
+# iOS Bracketed export pattern:
+# e.g.: [12/10/2024, 20:15:30] Ana: Hola
+#       [10/14/24, 9:30:15 PM] John: Hello
+#       [12/31/23, 11:59:02 PM] Messages and calls are end-to-end encrypted.
+MESSAGE_PATTERN_IOS = re.compile(
+    r"^\[(?P<date>\d{1,4}[/\.-]\d{1,2}[/\.-]\d{2,4})[,\s]+(?P<time>\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:[ap]\.?\s*m\.?|[ap]m))?)\](?:\s*-\s*|\s+)(?:(?P<sender>[^:\n]+?):\s*(?P<message>.*)|(?P<system_message>.*))$",
+    re.IGNORECASE,
 )
+
+MESSAGE_PATTERNS = [MESSAGE_PATTERN_STANDARD, MESSAGE_PATTERN_IOS]
+MESSAGE_PATTERN = MESSAGE_PATTERN_STANDARD  # Backwards compatibility
+
+_MEDIA_ATTACH_PATTERNS = [
+    re.compile(r"^(.+?)\s*\((?:archivo adjunto|file attached)\)$", re.IGNORECASE),
+    re.compile(r"^<(?:\s*attached|\s*adjunto)\s*:\s*(.+?)>$", re.IGNORECASE),
+]
 _MEDIA_OMITTED = re.compile(
-    r"^<[Mm]ultimedia omitido>$|^<[Mm]edia omitted>$"
+    r"^<.*(?:omitido|omitted).*>$", re.IGNORECASE
 )
 
 _PREFIX_TYPE = {
     "IMG": "image", "PHOTO": "image",
-    "VID": "video", "GIF": "video",
-    "PTT": "audio", "AUD": "audio",
-    "STK": "sticker",
+    "VID": "video", "VIDEO": "video", "GIF": "video",
+    "PTT": "audio", "AUD": "audio", "AUDIO": "audio",
+    "STK": "sticker", "STICKER": "sticker",
+    "DOC": "document",
 }
 _EXT_TYPE = {
     "jpg": "image", "jpeg": "image", "png": "image", "heic": "image",
     "mp4": "video", "mov": "video", "avi": "video", "3gp": "video", "mkv": "video",
-    "opus": "audio", "ogg": "audio", "mp3": "audio", "m4a": "audio", "aac": "audio",
+    "opus": "audio", "ogg": "audio", "mp3": "audio", "m4a": "audio", "aac": "audio", "wav": "audio",
     "webp": "sticker",
     "pdf": "document", "docx": "document", "xlsx": "document", "pptx": "document",
     "doc": "document", "xls": "document", "txt": "document",
-    "zip": "document", "rar": "document", "apk": "document",
+    "zip": "document", "rar": "document", "apk": "document", "csv": "document",
 }
 
 
@@ -57,11 +84,16 @@ def _detect_media(text: str):
     if _MEDIA_OMITTED.match(stripped):
         return "omitted", None
 
-    m = _MEDIA_ATTACH.match(stripped)
-    if not m:
+    filename = None
+    for pattern in _MEDIA_ATTACH_PATTERNS:
+        m = pattern.match(stripped)
+        if m:
+            filename = m.group(1).strip()
+            break
+
+    if not filename:
         return None, None
 
-    filename = m.group(1).strip().lstrip("‎‏‪‬⁦⁩")
     prefix = filename.split("-")[0].upper() if "-" in filename else ""
     media_type = _PREFIX_TYPE.get(prefix)
 
@@ -73,22 +105,52 @@ def _detect_media(text: str):
 
 
 def parse_datetime(date_value: str, time_value: str) -> Optional[datetime]:
-    for fmt in ("%d/%m/%Y %H:%M", "%m/%d/%Y %H:%M"):
+    clean_time = (
+        time_value.replace("a. m.", "AM")
+        .replace("p. m.", "PM")
+        .replace("a.m.", "AM")
+        .replace("p.m.", "PM")
+        .replace("am", "AM")
+        .replace("pm", "PM")
+        .strip()
+    )
+    clean_date = date_value.replace(".", "/").replace("-", "/").strip()
+    date_time_str = f"{clean_date} {clean_time}"
+
+    formats = (
+        # 12h formats
+        "%d/%m/%Y %I:%M %p",
+        "%m/%d/%Y %I:%M %p",
+        "%Y/%m/%d %I:%M %p",
+        "%d/%m/%y %I:%M %p",
+        "%m/%d/%y %I:%M %p",
+        "%d/%m/%Y %I:%M:%S %p",
+        "%m/%d/%Y %I:%M:%S %p",
+        "%Y/%m/%d %I:%M:%S %p",
+        "%d/%m/%y %I:%M:%S %p",
+        "%m/%d/%y %I:%M:%S %p",
+        # 24h formats
+        "%d/%m/%Y %H:%M",
+        "%m/%d/%Y %H:%M",
+        "%Y/%m/%d %H:%M",
+        "%d/%m/%y %H:%M",
+        "%m/%d/%y %H:%M",
+        "%d/%m/%Y %H:%M:%S",
+        "%m/%d/%Y %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%d/%m/%y %H:%M:%S",
+        "%m/%d/%y %H:%M:%S",
+    )
+    for fmt in formats:
         try:
-            return datetime.strptime(f"{date_value} {time_value}", fmt)
+            return datetime.strptime(date_time_str, fmt)
         except ValueError:
             continue
     return None
 
 
 def normalize_whatsapp_text(value: str) -> str:
-    return (
-        value.replace(" ", " ")
-        .replace(" ", " ")
-        .replace(" ", " ")
-        .replace("​", "")
-        .strip()
-    )
+    return value.translate(_TRANSLATION_TABLE).strip()
 
 
 def parse_whatsapp_backup(content: str) -> List[ChatMessage]:
@@ -99,7 +161,12 @@ def parse_whatsapp_backup(content: str) -> List[ChatMessage]:
         if not line:
             continue
 
-        match = MESSAGE_PATTERN.match(line)
+        match = None
+        for pattern in MESSAGE_PATTERNS:
+            match = pattern.match(line)
+            if match:
+                break
+
         if not match:
             if messages:
                 prev = messages[-1]
@@ -143,9 +210,10 @@ def _normalize_date(value: str, is_end: bool = False) -> Optional[datetime]:
     if not value:
         return None
 
-    for fmt in ("%d/%m/%Y", "%m/%d/%Y"):
+    clean_date = value.replace(".", "/").replace("-", "/").strip()
+    for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y/%m/%d", "%d/%m/%y", "%m/%d/%y"):
         try:
-            parsed = datetime.strptime(value.strip(), fmt)
+            parsed = datetime.strptime(clean_date, fmt)
             return datetime.combine(parsed.date(), time(23, 59, 59) if is_end else time(0, 0))
         except ValueError:
             continue
@@ -161,7 +229,7 @@ def filter_messages(
 ) -> List[ChatMessage]:
     result = list(messages)
 
-    if sender and sender != "Todos":
+    if sender and sender not in ("Todos", "All"):
         result = [msg for msg in result if msg.sender == sender]
 
     query = (search or "").strip().lower()

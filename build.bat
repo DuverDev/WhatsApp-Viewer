@@ -1,47 +1,21 @@
 @echo off
+cd /d "%~dp0"
 echo Compilando WhatsApp Backup Viewer...
 echo.
 
-pip install pyinstaller >nul 2>&1
+if exist "%USERPROFILE%\anaconda3\python.exe" (
+    set PYTHON="%USERPROFILE%\anaconda3\python.exe"
+    set PYINSTALLER="%USERPROFILE%\anaconda3\Scripts\pyinstaller.exe"
+) else (
+    set PYTHON=python
+    set PYINSTALLER=pyinstaller
+)
 
 echo Generando version info...
-python version_info.py
+%PYTHON% version_info.py
 
-pyinstaller --onefile --windowed ^
-  --name "WhatsApp Viewer" ^
-  --icon "app.ico" ^
-  --version-file "version_info.txt" ^
-  --add-data "templates;templates" ^
-  --add-data "app_icon_256.png;." ^
-  --hidden-import webview ^
-  --hidden-import webview.platforms.winforms ^
-  --hidden-import clr_loader ^
-  --hidden-import pythonnet ^
-  --collect-data webview ^
-  --exclude-module PyQt5 ^
-  --exclude-module PyQt6 ^
-  --exclude-module PySide2 ^
-  --exclude-module PySide6 ^
-  --exclude-module tkinter ^
-  --exclude-module _tkinter ^
-  --exclude-module matplotlib ^
-  --exclude-module numpy ^
-  --exclude-module pandas ^
-  --exclude-module scipy ^
-  --exclude-module PIL ^
-  --exclude-module IPython ^
-  --exclude-module notebook ^
-  --exclude-module nbformat ^
-  --exclude-module nbconvert ^
-  --exclude-module zmq ^
-  --exclude-module tornado ^
-  --exclude-module black ^
-  --exclude-module pygments ^
-  --exclude-module chardet ^
-  --exclude-module sqlite3 ^
-  --exclude-module test ^
-  --exclude-module unittest ^
-  app.py
+echo Ejecutando PyInstaller...
+%PYINSTALLER% "WhatsApp Viewer.spec" --noconfirm
 
 if errorlevel 1 (
     echo.
@@ -64,4 +38,3 @@ echo  Listo!
 echo  Ejecutable: dist\WhatsApp Viewer.exe
 echo  Coloca tus chats en: dist\chats\
 echo ========================================
-pause
