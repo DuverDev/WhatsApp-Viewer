@@ -27,14 +27,14 @@ class ParseWhatsappBackupTests(unittest.TestCase):
     def test_parses_real_export_format_with_ampm_and_system_messages(self):
         content = (
             "28/8/2021, 8:18 a. m. - Los mensajes y las llamadas están cifrados de extremo a extremo. Nadie fuera de este chat, ni siquiera WhatsApp, puede leerlos ni escucharlos. Toca para obtener más información.\n"
-            "28/8/2021, 8:18 a. m. - Nora Bonita 💙: Hola\n"
-            "28/8/2021, 8:19 a. m. - 💙 Blacktao: Hola, tiempo sin hablar"
+            "28/8/2021, 8:18 a. m. - Contacto Demo 💙: Hola\n"
+            "28/8/2021, 8:19 a. m. - 💙 Usuario B: Hola, tiempo sin hablar"
         )
         messages = parse_whatsapp_backup(content)
         self.assertEqual(len(messages), 3)
         self.assertEqual(messages[0].sender, "Sistema")
-        self.assertEqual(messages[1].sender, "Nora Bonita 💙")
-        self.assertEqual(messages[2].sender, "💙 Blacktao")
+        self.assertEqual(messages[1].sender, "Contacto Demo 💙")
+        self.assertEqual(messages[2].sender, "💙 Usuario B")
 
     def test_parses_english_android_format_with_attachments_and_omitted(self):
         content = (
