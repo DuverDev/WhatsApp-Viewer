@@ -1,5 +1,12 @@
 # Cambios / Changelog
 
+## 1.2.2 — 2026-11-18
+
+### Compilación
+- PyInstaller 6.22.3 se compila en GitHub Actions con su propio arranque (*bootloader*) en vez del precompilado del paquete, que comparten muchos programas y marcan algunos antivirus por IA (falsos positivos como el de SentinelOne en la versión anterior).
+- Sin compresión UPX, que también dispara alertas heurísticas.
+- Sin cambios en el funcionamiento de la app.
+
 ## 1.2.1 — 2026-11-18
 
 ### Seguridad

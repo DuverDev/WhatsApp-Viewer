@@ -1,4 +1,4 @@
-# WhatsApp Backup Viewer (v1.2.1)
+# WhatsApp Backup Viewer (v1.2.2)
 
 Visualizador local de chats exportados de WhatsApp. Gratuito, de codigo abierto y 100% offline.
 
@@ -108,7 +108,7 @@ Cada [release](../../releases/latest) trae el SHA-256 del ejecutable (también e
 > [!NOTE]
 > **Sobre las 4/70 alertas heurísticas en VirusTotal (Falsos Positivos de PyInstaller):**
 > El binario oficial compilado en GitHub Actions recibe 0 detecciones en 66 de 70 motores (incluidos **Microsoft Defender, Kaspersky, Bitdefender, ESET, Malwarebytes, Google y Avast**). Únicamente 4 motores basados en heurística agresiva o aprendizaje automático (*Bkav Pro*, *CrowdStrike Falcon 60%*, *SecureAge* y *Skyhigh SWG*) emiten una alerta genérica porque:
-> 1. Está empaquetado como ejecutable único con **PyInstaller (`--onefile`) y compresión UPX**, cuyo *bootloader* descomprime Python/Flask/pywebview en `%TEMP%` al iniciar.
+> 1. Está empaquetado como ejecutable único con **PyInstaller (`--onefile`)**, cuyo *bootloader* descomprime Python/Flask/pywebview en `%TEMP%` al iniciar.
 > 2. Es software libre gratuito compilado en la nube sin un certificado comercial de firma de código EV de pago.
 > 3. Todo el código fuente está 100 % abierto y verificable en este repositorio; si prefieres no usar el `.exe`, puedes ejecutarlo directo con `python app.py`.
 
