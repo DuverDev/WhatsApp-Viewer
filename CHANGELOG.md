@@ -1,5 +1,11 @@
 # Cambios / Changelog
 
+## 1.2.4 — 2026-11-19
+
+### Seguridad
+- **Dependencias fijadas con hash:** el `.exe` se compila con `requirements.lock`, que fija la versión exacta y el SHA-256 de cada paquete de Python (también PyInstaller y lo que necesita, que antes se instalaban sin fijar). Si alguien cambia un paquete en PyPI, la compilación falla en vez de meterlo en el ejecutable.
+- Sin cambios en el funcionamiento de la app.
+
 ## 1.2.3 — 2026-11-19
 
 ### Seguridad

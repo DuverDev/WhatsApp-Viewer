@@ -1,4 +1,4 @@
-# WhatsApp Backup Viewer (v1.2.3)
+# WhatsApp Backup Viewer (v1.2.4)
 
 Visualizador local de chats exportados de WhatsApp. Gratuito, de codigo abierto y 100% offline.
 
@@ -43,6 +43,8 @@ cd WhatsApp-Viewer
 pip install -r requirements.txt
 python app.py
 ```
+
+`requirements.txt` es la lista de lo que usa la app. Los `.exe` publicados se compilan con `requirements.lock`: versiones exactas y su hash SHA-256 (`pip install --require-hashes --no-deps -r requirements.lock`). Para actualizarlo, ver la primera línea de ese archivo.
 
 ## Estructura de carpetas
 

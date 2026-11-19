@@ -33,8 +33,9 @@ jobs:
           PYINSTALLER_COMPILE_BOOTLOADER: "1"
         run: |
           python -m pip install --upgrade pip wheel
-          pip install --no-binary pyinstaller --no-cache-dir "pyinstaller==6.22.3"
-          pip install -r requirements.txt
+          # Versiones exactas con su hash (requirements.lock, R-34): un paquete cambiado en PyPI no entra al .exe.
+          # PyInstaller sigue compilándose desde su código fuente, que también va con hash.
+          pip install --require-hashes --no-deps --no-binary pyinstaller --no-cache-dir -r requirements.lock
 
       - name: Run tests
         run: pytest -v
