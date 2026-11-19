@@ -73,6 +73,7 @@ def _solo_peticiones_locales():
 @app.after_request
 def no_cache(response):
     response.headers["Cache-Control"] = "no-store"
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
     return response
 
 
@@ -163,6 +164,19 @@ def serve_media(name, filename):
         return jsonify({"error": "Ruta invalida"}), 400
     if not file_path.is_file():
         return jsonify({"error": "Archivo no encontrado"}), 404
-    return send_file(file_path)
+    # Los adjuntos los manda cualquiera que escriba por WhatsApp: un .html o .svg abierto aquí correría en
+    # este mismo origen y leería todos los chats (SEC-086). Solo se muestran en la app imagen, video, audio
+    # y PDF; lo demás se descarga. Y nunca se ejecuta nada: sandbox y sin adivinar el tipo.
+    mime = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    inline = mime == "application/pdf" or (
+        mime.split("/")[0] in ("image", "video", "audio") and mime != "image/svg+xml"
+    )
+    response = send_file(file_path, mimetype=mime if inline else "application/octet-stream",
+                         as_attachment=not inline, download_name=file_path.name)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    if mime != "application/pdf":
+        # Al PDF no: el visor de PDF de WebView2 no abre en un documento con sandbox
+        response.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
+    return response
 
 

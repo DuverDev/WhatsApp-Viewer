@@ -1,4 +1,4 @@
-# WhatsApp Backup Viewer (v1.2.2)
+# WhatsApp Backup Viewer (v1.2.3)
 
 Visualizador local de chats exportados de WhatsApp. Gratuito, de codigo abierto y 100% offline.
 

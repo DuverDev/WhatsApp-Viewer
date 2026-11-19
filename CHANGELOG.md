@@ -1,5 +1,10 @@
 # Cambios / Changelog
 
+## 1.2.3 — 2026-11-19
+
+### Seguridad
+- **Adjuntos del chat aislados:** un documento `.html` o `.svg` recibido por WhatsApp podía ejecutar JavaScript al abrirlo en el visor y leer todos los chats. Ahora solo se muestran dentro de la app las imágenes, los videos, los audios y los PDF; lo demás se descarga como archivo, y ningún adjunto puede ejecutar código (`Content-Security-Policy: sandbox`, `X-Content-Type-Options: nosniff`). Con 2 pruebas nuevas.
+
 ## 1.2.2 — 2026-11-18
 
 ### Compilación
